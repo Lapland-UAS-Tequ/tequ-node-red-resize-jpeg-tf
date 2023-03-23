@@ -1,0 +1,153 @@
+{
+    "id": "be2002a6440b92ca",
+    "type": "subflow",
+    "name": "Resize JPEG [TF]",
+    "info": "Expects input image buffer in \"msg.payload\". \r\n\r\nSupported image types:\r\n- JPG\r\n\r\nDependencies:\r\n- https://www.npmjs.com/package/@tensorflow/tfjs-node-gpu",
+    "category": "Tequ-API Client",
+    "in": [
+        {
+            "x": 140,
+            "y": 120,
+            "wires": [
+                {
+                    "id": "f3bfefdada214958"
+                }
+            ]
+        }
+    ],
+    "out": [
+        {
+            "x": 540,
+            "y": 120,
+            "wires": [
+                {
+                    "id": "f3bfefdada214958",
+                    "port": 0
+                }
+            ]
+        }
+    ],
+    "env": [
+        {
+            "name": "width",
+            "type": "num",
+            "value": "85",
+            "ui": {
+                "type": "input",
+                "opts": {
+                    "types": [
+                        "num",
+                        "env"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "height",
+            "type": "num",
+            "value": "48",
+            "ui": {
+                "type": "input",
+                "opts": {
+                    "types": [
+                        "num",
+                        "env"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "target",
+            "type": "str",
+            "value": "data.properties.object.data.original.thumbnail",
+            "ui": {
+                "label": {
+                    "en-US": "msg."
+                },
+                "type": "input",
+                "opts": {
+                    "types": [
+                        "str",
+                        "env"
+                    ]
+                }
+            }
+        }
+    ],
+    "meta": {
+        "module": "tequ-node-red-resize-jpeg-tf",
+        "type": "tequ-node-red-resize-jpeg-tf",
+        "version": "0.0.1",
+        "author": "juha.autioniemi@lapinamk.fi",
+        "desc": "Resize image using tfjs-node-gpu.",
+        "license": "MIT"
+    },
+    "color": "#3FADB5",
+    "icon": "node-red-contrib-image-info/resolution.png",
+    "status": {
+        "x": 540,
+        "y": 180,
+        "wires": [
+            {
+                "id": "3894124fc6e6fdb5",
+                "port": 0
+            }
+        ]
+    },
+    "flow": [
+        {
+            "id": "f3bfefdada214958",
+            "type": "function",
+            "z": "be2002a6440b92ca",
+            "name": "Create thumbnail",
+            "func": "function addProps(obj, arr, val) {\n    if (typeof arr == 'string')\n        arr = arr.split(\".\");\n\n    obj[arr[0]] = obj[arr[0]] || {};\n\n    var tmpObj = obj[arr[0]];\n\n    if (arr.length > 1) {\n        arr.shift();\n        addProps(tmpObj, arr, val);\n    }\n    else\n        obj[arr[0]] = val;\n\n    return obj;\n\n}\n\nasync function resize(inputTensor, width, height) {\n    return tf.tidy(() => {\n        let resized = tf.image.resizeBilinear(inputTensor, [height, width])\n        resized = tf.reshape(resized, [height, width, 3])\n        return Promise.resolve(tf.node.encodeJpeg(resized));\n    });\n}\n\nasync function convert(input) {\n    return tf.tidy(() => {\n        const tensor = tf.node.decodeJpeg(input, 3).expandDims(0);\n        const shape = tensor.shape;\n        return tensor\n    });\n}\n\ntry{\n    let resize_time_ms;\n    const image = msg.payload;\n    const start = Date.now();\n    const width = env.get(\"width\")\n    const height = env.get(\"height\")\n    const tensor = await convert(image)\n    const thumbnail = Buffer.from(await resize(tensor, width, height))\n    addProps(msg,env.get(\"target\"),thumbnail)\n    //msg.data.properties.object.data.original.thumbnail = thumbnail\n    resize_time_ms = Date.now() - start;\n    addProps(msg, env.get(\"target\") + \"_ms\", resize_time_ms);\n    //msg.data.properties.object.data.original.thumbnail_ms = resize_time_ms;\n    node.status({ fill: \"green\", shape: \"dot\", text: resize_time_ms + \" ms\" });\n    return msg;\n}\ncatch (e) {\n    node.status({ fill: \"red\", shape: \"dot\", text: \"Resize failed...\" });\n    node.error(e, msg);\n}",
+            "outputs": 1,
+            "noerr": 0,
+            "initialize": "",
+            "finalize": "// Code added here will be run when the\n// node is being stopped or re-deployed.\nconst model = context.get(\"savedmodel\")\ntf.dispose(model)\ncontext.set(\"model\", undefined)\ncontext.set(\"modelInfo\", undefined)",
+            "libs": [
+                {
+                    "var": "tf",
+                    "module": "@tensorflow/tfjs-node-gpu"
+                }
+            ],
+            "x": 310,
+            "y": 120,
+            "wires": [
+                []
+            ]
+        },
+        {
+            "id": "3894124fc6e6fdb5",
+            "type": "status",
+            "z": "be2002a6440b92ca",
+            "name": "",
+            "scope": null,
+            "x": 340,
+            "y": 180,
+            "wires": [
+                []
+            ]
+        },
+        {
+            "id": "e8dd2192afa22fa4",
+            "type": "subflow:be2002a6440b92ca",
+            "z": "6033593994e89a5d",
+            "name": "",
+            "env": [
+                {
+                    "name": "target",
+                    "value": "payload",
+                    "type": "str"
+                }
+            ],
+            "x": 450,
+            "y": 400,
+            "wires": [
+                [
+                    "ad927a696e467eb5"
+                ]
+            ]
+        }
+    ]
+}
