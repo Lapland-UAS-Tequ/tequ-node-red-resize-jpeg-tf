@@ -7,7 +7,7 @@ Resize image using tfjs-node-gpu.
 
 Run the following command in your Node-RED user directory - typically `~/.node-red`
 
-        npm install tequ-node-red-resize-jpeg-tf
+        npm install Lapland-UAS-Tequ/tequ-node-red-resize-jpeg-tf
 
 ## Information
 
